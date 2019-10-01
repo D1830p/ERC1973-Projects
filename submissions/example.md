@@ -1,18 +1,21 @@
-# Project Name: Krawlcat 
+# Project Name: Asset Tokenization 
 
-# Authors and Github username: Lee Raj (@lerajk)
+# Authors and Github username: Dharti Parikh and D1830p
 
 # Description of the Project 
 
-A Layer-2 decentralized oracle protocol that aggregates cryptocurrency prices from various nodes within the network. 
+A layer 2 tokenization solution over a decentralized network, managed by smart contract to release tokens per participant and eventually share the profits using EIP1973
 
 # Problem specification related to ERC 1973
 
-Participating nodes in the Krawlcat network need to be incentivized when contributing good data and punished for providing fraudulent data. When the nodes in the network reach a higher limit (100s, 1000s), ERC20 reward distribution faces a bottleneck due to block gas limit.  
+Buying a big asset is difficult for one person and the accredited investors have captured the market from a long time. 
+One of the primary reason is that there is no structured way to ensure proper distribution of profits and shares.
+Such assets could be digital or tangible assets like antiques, gold, real estate etc.
 
 # Solution in relation to ERC 1973 
 
-Sound application of ERC 1973 allows ERC20 reward distribution in a scalable manner to all the partcipating nodes. 
+Tokenizing such assets prove to be a major application in blockchain. The primary thing is tokenizing the whole asset into multiple units, called tokens otherwise.
+Once you register that on the Blockchain, EIP 1973 can be used to pay off all the participants and eventually those rewards would decrease with time creating an initial boost in investment. Such a use case enables a group of investors to decentralize ownership and ethically distribute the funds and profits.
 
 # Related Links
 
