@@ -62,30 +62,14 @@ library SafeMath {
         require(b != 0, errorMessage);
         return a % b;
     }
+    
+    function ceil(uint256 a, uint256 m) internal pure returns (uint256) {
+        uint256 c = add(a,m);
+        uint256 d = sub(c,1);
+        return mul(div(d,m),m);
+    }
 }
 
-//role lib
-
-// library Roles {
-//     struct Role {
-//         mapping (address => bool) bearer;
-//     }
-
-//     function add(Role storage role, address account) internal {
-//         require(!has(role, account), "Roles: account already has role");
-//         role.bearer[account] = true;
-//     }
-
-//     function remove(Role storage role, address account) internal {
-//         require(has(role, account), "Roles: account does not have role");
-//         role.bearer[account] = false;
-//     }
-
-//     function has(Role storage role, address account) internal view returns (bool) {
-//         require(account != address(0), "Roles: account is the zero address");
-//         return role.bearer[account];
-//     }
-// }
 
 // IERC20 Interface
 
@@ -116,104 +100,6 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-//Context sol
-
-// contract Context {
-//     constructor () internal { }
-//     // solhint-disable-previous-line no-empty-blocks
-
-//     function _msgSender() internal view returns (address) {
-//         return msg.sender;
-//     }
-
-//     function _msgData() internal view returns (bytes memory) {
-//         this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-//         return msg.data;
-//     }
-// }
-
-// ownable contract
-
-// contract Ownable is Context {
-//     address private _owner;
-
-//     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    
-//     constructor () internal {
-//         _owner = _msgSender();
-//         emit OwnershipTransferred(address(0), _owner);
-//     }
-
-//     function owner() public view returns (address) {
-//         return _owner;
-//     }
-
-//     modifier onlyOwner() {
-//         require(isOwner(), "Ownable: caller is not the owner");
-//         _;
-//     }
-
-//     function isOwner() public view returns (bool) {
-//         return _msgSender() == _owner;
-//     }
-
-//     function renounceOwnership() public onlyOwner {
-//         emit OwnershipTransferred(_owner, address(0));
-//         _owner = address(0);
-//     }
-
-//     function transferOwnership(address newOwner) public onlyOwner {
-//         _transferOwnership(newOwner);
-//     }
-
-//     function _transferOwnership(address newOwner) internal {
-//         require(newOwner != address(0), "Ownable: new owner is the zero address");
-       emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
-    }
-}
-
-//minterrole contract
-
-// contract MinterRole is Context {
-//     using Roles for Roles.Role;
-
-//     event MinterAdded(address indexed account);
-//     event MinterRemoved(address indexed account);
-
-//     Roles.Role private _minters;
-
-//     constructor () internal {
-//         _addMinter(_msgSender());
-//     }
-
-//     modifier onlyMinter() {
-//         require(isMinter(_msgSender()), "MinterRole: caller does not have the Minter role");
-//         _;
-//     }
-
-//     function isMinter(address account) public view returns (bool) {
-//         return _minters.has(account);
-//     }
-
-//     function addMinter(address account) public onlyMinter {
-//         _addMinter(account);
-//     }
-
-//     function renounceMinter() public {
-//         _removeMinter(_msgSender());
-//     }
-
-//     function _addMinter(address account) internal {
-//         _minters.add(account);
-//         emit MinterAdded(account);
-//     }
-
-//     function _removeMinter(address account) internal {
-//         _minters.remove(account);
-//         emit MinterRemoved(account);
-//     }
-// }
 
 //erc20detailed contract
 
@@ -318,7 +204,13 @@ contract PaintingToken is ERC20Detailed {
         _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
         _balances[recipient] = _balances[recipient].add(amount);
         
-        uint256 percentage = (amount/_totalSupply)*100;
+        uint256 balanceOfReceiver = balanceOf(recipient);
+        uint256 balanceOfSender = balanceOf(sender);
+        
+        uint256 percentage = (balanceOfReceiver/_totalSupply)*100;
+        uint256 percentageOfSender = (balanceOfSender/_totalSupply)*100;
+        
+        // to maintain the % share of receiver
         if(percentage>1){
             if(percentage>=25 && percentage <50){
                 percentageShare[recipient] = 1;    
@@ -337,10 +229,19 @@ contract PaintingToken is ERC20Detailed {
             participants[recipient] = true;
         }
         
-    	if(balanceOf(sender) == 0){
+        // to maintian the % share of sender also
+    	if(balanceOfSender == 0){
             participants[sender] = false;
             totalParticipants = totalParticipants.sub(1);
 	    }else{
+	         if(percentageOfSender>=25 && percentageOfSender <50){
+                percentageShare[sender] = 1;
+            }else if(percentageOfSender>=50 && percentageOfSender <75){
+                percentageShare[sender] = 2;
+            }else if(percentageOfSender>=75){
+                percentageShare[sender] = 3;
+                
+            }
             participants[sender] = true;
     	}
         emit Transfer(sender, recipient, amount);
@@ -366,6 +267,10 @@ contract PaintingToken is ERC20Detailed {
     function getTotalParticipant() public view returns (uint256){
         return totalParticipants;
     }
+    
+    function getTotalPercentage() public view returns (uint256){
+        return percentageTotal;
+    }
 }
 
 //incentivetoken contract
@@ -378,6 +283,8 @@ contract IncentiveToken is ERC20Detailed {
     mapping (address => uint256) private _balances;
 
     mapping (address => mapping (address => uint256)) private _allowances;
+    
+    uint256 public basePercent = 100;
 
 
 // distributor properties
@@ -390,13 +297,12 @@ contract IncentiveToken is ERC20Detailed {
     PaintingToken contractInstance = PaintingToken(tokencontractAddressPainting);
     mapping(address => uint256) public participantMask;
     
-    constructor(string memory name, string memory symbol, uint8 decimals,uint256 totalSupply,uint256 _tokensPerBlock, uint256 _blockFreezeInterval) ERC20Detailed(name,symbol,decimals) public {
+    constructor(string memory name, string memory symbol, uint256 totalSupply,uint256 _tokensPerBlock, uint256 _blockFreezeInterval) ERC20Detailed(name,symbol,2) public {
         _totalSupply = totalSupply;
         _balances[msg.sender] = _totalSupply;
 	    lastMintedBlockNumber = block.number;
         tokensPerBlock = _tokensPerBlock;
         blockFreezeInterval = _blockFreezeInterval;
-       // contractInstance = PaintingToken(tokencontractAddressPainting);
     }
     
 
@@ -488,27 +394,6 @@ contract IncentiveToken is ERC20Detailed {
     
     // for reward we are using the same contract
 
-//    modifier isAuthorized() {
-//        require(isMinter(msg.sender));
-//	    require(tokencontractAddressPainting.balanceOf(msg.sender) > 0);
-//        _;
-//    }
-
-    //function addMinters(address _minter) external returns (bool) {
-    //    _addMinter(_minter);
-    //    totalParticipants = totalParticipants.add(1);
-    //    updateParticipantMask(_minter);
-    //    return true;
-    // }
-
-
- 
-    //function removeMinters(address _minter) external returns (bool) {
-    //    totalParticipants = totalParticipants.sub(1);
-    //    _removeMinter(_minter); 
-    //    return true;
-    //}
-
 
     function trigger() external isAuthorized returns (bool) {
         bool res = readyToMint();
@@ -524,7 +409,7 @@ contract IncentiveToken is ERC20Detailed {
     function withdraw() external isAuthorized returns (bool) {
         uint256 amount = calculateRewards();
         require(amount >0);
-        transfer(msg.sender, amount.add((amount.mul(contractInstance.getPercentageShare(msg.sender)))));
+        transfer(msg.sender, amount.add(amount.mul(contractInstance.getPercentageShare(msg.sender))));
     }
 
     function readyToMint() public view returns (bool) {
@@ -551,11 +436,13 @@ contract IncentiveToken is ERC20Detailed {
         
         //multiply to cover up % reward
         uint256 tokenReleaseAmount = (currentBlockNumber.sub(lastMintedBlockNumber)).mul(tokensPerBlock);
+        tokenReleaseAmount = tokenReleaseAmount.mul(contractInstance.getTotalPercentage());
         lastMintedBlockNumber = currentBlockNumber;
         mint(tokencontractAddress, tokenReleaseAmount);
         calculateTPP(tokenReleaseAmount);
         return true;
     }
+    
 
 
     function calculateTPP(uint256 tokens) private returns (bool) {
@@ -577,4 +464,3 @@ contract IncentiveToken is ERC20Detailed {
         return true;
     }
     
-}
