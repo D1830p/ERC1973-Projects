@@ -29,7 +29,7 @@ Fractional part the customer buys -> bonus rewards - profit depends on the fract
 
 # Related Links
 
-* Github repo for the project
+*https://github.com/D1830p/ERC1973-DAPP.git
 * Wesbite link
 
 # Additional Notes 
